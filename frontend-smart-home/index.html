@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Smart Home</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div id="app">
+    <div id="login" v-if="auth.token === ''">
+        <div class="header animOpacityShow" style="animation-delay: .5s; animation-duration: 1s;">Smart Home</div>
+        <div class="form animOpacityShow" style="animation-delay: 1.5s;"
+             :class="auth.invalidLoginForm === true ? 'animShake' : ''">
+            <div class="form-field" :class="auth.invalidLoginForm === true ? 'error' : ''">
+                <input type="text" placeholder=" " v-model="auth.login">
+                <div class="form-field--placeholder">login</div>
+                <span class="animOpacityShow" v-if="auth.invalidLoginForm">{{ auth.errors.login }}</span>
+            </div>
+            <div class="form-field" :class="auth.invalidLoginForm === true ? 'error' : ''">
+                <input type="password" placeholder=" " v-model="auth.password">
+                <div class="form-field--placeholder">password</div>
+                <span class="animOpacityShow" v-if="auth.invalidLoginForm">{{ auth.errors.password }}</span>
+            </div>
+            <div class="btn" @click="login">
+                login
+            </div>
+        </div>
+    </div>
+
+    <div v-else>
+        <div class="toolbar">
+            <div class="back" @click="back()">
+                < <span id="back-name">{{ navigation }}</span>
+            </div>
+            <div class="devices-tab" @click="devicesTab()">
+                <img src="assets/img/icons/devices.png" alt="" class="devices-tab--img">
+                <span class="menu--title">Devices</span>
+            </div>
+        </div>
+
+        <div id="home" class="container" v-if="curTab === 'home'">
+            <div class="rooms">
+                <div class="preloader" v-if="rooms.length === 0"></div>
+
+                <div v-else>
+                    <div class="room animOpacityShow" v-for="(room, index) in rooms"
+                         :style="`animation-delay: ${index * 0.3}s;`" @click="getRoom(room.id)">
+                        <img :src="room.photo" alt="" class="room-img">
+                        <div class="room-name">{{ room.name }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!--<div class="animOpacityShow" style="animation-delay: 1s;">
+                <div class="title">Favorited devices</div>
+
+                <div class="devices">
+                    <div class="device">
+                        <img src="assets/img/devices/light.png" alt="" class="device&#45;&#45;img">
+                        <div class="device&#45;&#45;state on"></div>
+                        <div class="device&#45;&#45;name">Люстра 1</div>
+                    </div>
+                    <div class="device">
+                        <img src="assets/img/devices/light.png" alt="" class="device&#45;&#45;img">
+                        <div class="device&#45;&#45;state off"></div>
+                        <div class="device&#45;&#45;name">Люстра 2</div>
+                    </div>
+                </div>
+            </div>-->
+        </div>
+
+        <div id="room" class="container room-page" v-else-if="curTab === 'room'">
+            <div class="room">
+                <img :src="curRoom.photo" alt="" class="room-img imageToTop" style="animation-delay: .3s;">
+                <div class="room-name">{{ curRoom.name }}</div>
+            </div>
+
+            <div v-if="devices.length === 0">
+                <div class="preloader"></div>
+            </div>
+            <div class="devices" v-else>
+                <div class="device animOpacityShow" :style="`animation-delay: ${(index + 1) * 0.5}s;`"
+                     v-for="(device, index) in devices" @click="changeStateDevice(device.id)">
+                    <img :src="`assets/img/devices/${type_image[device.type_id]}`" alt="" class="device--img">
+                    <div class="device--state"
+                         :class="device.value === 'on' || device.value === 'open' ? 'on' : device.value === 'close' || device.value === 'off' ? 'off' : '' "></div>
+                    <div class="device--name">
+                        {{ device.name }}
+                        <span v-if="device.type_id === 5"><br>{{ device.value }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else-if="curTab === 'devices'" class="container">
+            <div class="title">All devices</div>
+
+            <div class="preloader" v-if="devices.length === 0"></div>
+
+            <div class="devices" v-else>
+                <div class="device" :class="index % 2 === 0 ? 'blockMoveLeft' : 'blockMoveRight'"
+                     :style="`animation-delay: ${Math.ceil(index / 2) * 0.3}s;`" v-for="(device, index) in devices"
+                     @click="changeStateDevice(device.id)">
+                    <img :src="`assets/img/devices/${type_image[device.type_id]}`" alt="" class="device--img">
+                    <div class="device--state"
+                         :class="device.value === 'on' || device.value === 'open' ? 'on' : device.value === 'close' || device.value === 'off' ? 'off' : '' "></div>
+                    <div class="device--name">
+                        {{ device.name }}
+                        <span v-if="device.type_id === 5"><br>{{ device.value }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else-if="curTab === 'macros'" class="container">
+            <div class="title">All macros</div>
+
+            <br>
+            <div class="btn">create macros</div>
+            <br>
+
+            <div class="macros">
+                <div class="macros--item animOpacityShow" :style="`animation-delay: ${(index + 1) * 0.3}s;`"
+                     v-for="(item, index) in macros">
+                    <div class="macros--info">
+                        <div class="macros--name">{{ item.name }}</div>
+                        <div class="macros--action">
+                            <img src="assets/img/icons/play.png" alt="" class="macros--action-img"
+                                 @click="runMacros(item.id)">
+                            <img src="assets/img/icons/delete.png" alt="" class="macros--action-img"
+                                 @click="deleteMacros(item.id)">
+                        </div>
+                    </div>
+
+                    <div class="devices">
+                        <div class="device">
+                            <img src="assets/img/devices/light.png" alt="" class="device--img">
+                            <div class="device--state on"></div>
+                            <div class="device--name">Люстра 1</div>
+                        </div>
+                        <div class="device">
+                            <img src="assets/img/devices/light.png" alt="" class="device--img">
+                            <div class="device--state on"></div>
+                            <div class="device--name">Люстра 1</div>
+                        </div>
+                        <div class="device">
+                            <img src="assets/img/devices/light.png" alt="" class="device--img">
+                            <div class="device--state on"></div>
+                            <div class="device--name">Люстра 1</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="bottom-menu">
+            <div class="bottom-menu--item" @click="home()">
+                <img src="assets/img/icons/home.png" alt="" class="bottom-menu--item-icon">
+                <span class="bottom-menu--item-title">Home</span>
+            </div>
+            <div class="bottom-menu--item" @click="macrosPage()">
+                <img src="assets/img/icons/macros.png" alt="" class="bottom-menu--item-icon">
+                <span class="bottom-menu--item-title">Macros</span>
+            </div>
+            <div class="bottom-menu--item" @click="logout">
+                <img src="assets/img/icons/logout.png" alt="" class="bottom-menu--item-icon">
+                <span class="bottom-menu--item-title">Logout</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script src="assets/js/vue.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
